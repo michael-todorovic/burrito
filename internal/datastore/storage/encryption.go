@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"os"
+
 	"github.com/padok-team/burrito/internal/burrito/config"
 	"github.com/padok-team/burrito/internal/utils/encryption"
 )
@@ -17,8 +19,11 @@ func NewEncryptionManager(config config.EncryptionConfig) *EncryptionManager {
 		config:              config,
 	}
 
-	if config.Enabled && config.EncryptionKey != "" {
-		em.defaultEncryptor = encryption.NewEncryptor(config.EncryptionKey)
+	// Read encryption key from environment variable instead of config
+	encryptionKey := os.Getenv("BURRITO_DATASTORE_STORAGE_ENCRYPTION_KEY")
+
+	if config.Enabled && encryptionKey != "" {
+		em.defaultEncryptor = encryption.NewEncryptor(encryptionKey)
 	} else {
 		em.defaultEncryptor = nil
 		// // Create namespace-specific encryptors

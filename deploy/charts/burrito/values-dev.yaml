@@ -3,18 +3,29 @@ config:
     runner:
       image:
         repository: burrito
-        tag: DEV_TAG
+        tag: "1748963423"
         pullPolicy: Never
     datastore:
       storage:
-        mock: true
+        mock: false
+        encryption:
+          enabled: true
+          key: "ii5Booy8oek7ti4veuf4ieHebihasahgh4looR8keQuieb8si9ee0ahki3chie4taJ7Phegaiweevohjee4eizahw2aeMoxoofahY6eimaevahch5Taiphewaig6foab"
+        s3:
+          bucket: sre-fr1-int-burrito
+          usePathStyle: true
 global:
   deployment:
     image:
       repository: burrito
-      tag: DEV_TAG
+      tag: "1748963423"
       pullPolicy: Never
 tenants:
   - namespace:
       create: true
       name: "burrito-project"
+datastore:
+  deployment:
+    envFrom:
+      - secretRef:
+          name: s3-secrets
