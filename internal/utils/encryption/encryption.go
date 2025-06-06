@@ -16,20 +16,20 @@ type Encryptor struct {
 
 // NewEncryptor creates a new encryptor with the given key
 // The key will be hashed to ensure it's exactly 32 bytes for AES256
-func NewEncryptor(key string) *Encryptor {
+func NewEncryptor(key string) (*Encryptor, error) {
+	if key == "" {
+		return nil, fmt.Errorf("encryption key cannot be empty")
+	}
 	hash := sha256.Sum256([]byte(key))
 	return &Encryptor{
 		key: hash[:],
-	}
+	}, nil
 }
 
 // Encrypt encrypts plaintext using AES256-GCM
 // Returns the encrypted data with the nonce prepended
 func (e *Encryptor) Encrypt(plaintext []byte) ([]byte, error) {
-	if len(plaintext) == 0 {
-		return plaintext, nil
-	}
-
+	// Always encrypt, even empty data, to avoid information leakage
 	block, err := aes.NewCipher(e.key)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cipher: %w", err)
@@ -77,9 +77,4 @@ func (e *Encryptor) Decrypt(ciphertext []byte) ([]byte, error) {
 	}
 
 	return plaintext, nil
-}
-
-// IsEmpty checks if the key is empty (encryption disabled)
-func (e *Encryptor) IsEmpty() bool {
-	return len(e.key) == 0
 }

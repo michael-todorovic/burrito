@@ -40,7 +40,10 @@ func TestEncryptor_EncryptDecrypt(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			encryptor := NewEncryptor(tt.key)
+			encryptor, err := NewEncryptor(tt.key)
+			if err != nil {
+				t.Fatalf("failed to create encryptor: %v", err)
+			}
 
 			// Encrypt the plaintext
 			ciphertext, err := encryptor.Encrypt(tt.plaintext)
@@ -70,8 +73,14 @@ func TestEncryptor_EncryptDecrypt(t *testing.T) {
 func TestEncryptor_DifferentKeys(t *testing.T) {
 	plaintext := []byte("sensitive terraform plan data")
 
-	encryptor1 := NewEncryptor("key1")
-	encryptor2 := NewEncryptor("key2")
+	encryptor1, err := NewEncryptor("key1")
+	if err != nil {
+		t.Fatalf("failed to create encryptor1: %v", err)
+	}
+	encryptor2, err := NewEncryptor("key2")
+	if err != nil {
+		t.Fatalf("failed to create encryptor2: %v", err)
+	}
 
 	// Encrypt with first key
 	ciphertext, err := encryptor1.Encrypt(plaintext)
@@ -98,7 +107,10 @@ func TestEncryptor_KeyHashing(t *testing.T) {
 
 	for _, key := range keys {
 		t.Run("key_length_"+string(rune(len(key))), func(t *testing.T) {
-			encryptor := NewEncryptor(key)
+			encryptor, err := NewEncryptor(key)
+			if err != nil {
+				t.Fatalf("failed to create encryptor: %v", err)
+			}
 
 			ciphertext, err := encryptor.Encrypt(plaintext)
 			if err != nil {
@@ -118,7 +130,10 @@ func TestEncryptor_KeyHashing(t *testing.T) {
 }
 
 func TestEncryptor_NonceUniqueness(t *testing.T) {
-	encryptor := NewEncryptor("test-key")
+	encryptor, err := NewEncryptor("test-key")
+	if err != nil {
+		t.Fatalf("failed to create encryptor: %v", err)
+	}
 	plaintext := []byte("same plaintext")
 
 	// Encrypt the same plaintext multiple times
@@ -142,7 +157,10 @@ func TestEncryptor_NonceUniqueness(t *testing.T) {
 }
 
 func TestEncryptor_InvalidCiphertext(t *testing.T) {
-	encryptor := NewEncryptor("test-key")
+	encryptor, err := NewEncryptor("test-key")
+	if err != nil {
+		t.Fatalf("failed to create encryptor: %v", err)
+	}
 
 	tests := []struct {
 		name       string
@@ -169,7 +187,10 @@ func TestEncryptor_InvalidCiphertext(t *testing.T) {
 }
 
 func BenchmarkEncryptor_Encrypt(b *testing.B) {
-	encryptor := NewEncryptor("benchmark-key")
+	encryptor, err := NewEncryptor("benchmark-key")
+	if err != nil {
+		b.Fatalf("failed to create encryptor: %v", err)
+	}
 	plaintext := make([]byte, 1024) // 1KB
 
 	b.ResetTimer()
@@ -182,7 +203,10 @@ func BenchmarkEncryptor_Encrypt(b *testing.B) {
 }
 
 func BenchmarkEncryptor_Decrypt(b *testing.B) {
-	encryptor := NewEncryptor("benchmark-key")
+	encryptor, err := NewEncryptor("benchmark-key")
+	if err != nil {
+		b.Fatalf("failed to create encryptor: %v", err)
+	}
 	plaintext := make([]byte, 1024) // 1KB
 
 	ciphertext, err := encryptor.Encrypt(plaintext)
@@ -196,5 +220,17 @@ func BenchmarkEncryptor_Decrypt(b *testing.B) {
 		if err != nil {
 			b.Fatal(err)
 		}
+	}
+}
+
+func TestNewEncryptor_EmptyKey(t *testing.T) {
+	_, err := NewEncryptor("")
+	if err == nil {
+		t.Error("NewEncryptor should return an error for empty key")
+	}
+
+	expectedError := "encryption key cannot be empty"
+	if err.Error() != expectedError {
+		t.Errorf("expected error message '%s', got '%s'", expectedError, err.Error())
 	}
 }

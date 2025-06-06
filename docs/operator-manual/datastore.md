@@ -47,12 +47,9 @@ config:
 
 datastore:
   deployment:
-    env:
-      - name: BURRITO_DATASTORE_STORAGE_ENCRYPTION_KEY
-        valueFrom:
-          secretKeyRef:
-            name: burrito-encryption-key
-            key: key
+    envFrom:
+      - secretRef:
+          name: burrito-datastore-encryption-key
 ```
 
 You'll need to create a secret containing the encryption key:
@@ -61,11 +58,11 @@ You'll need to create a secret containing the encryption key:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: burrito-encryption-key
+  name: burrito-datastore-encryption-key
   namespace: <datastoreNamespace>
 type: Opaque
 stringData:
-  key: <your-32-byte-base64-encoded-encryption-key>
+  BURRITO_DATASTORE_STORAGE_ENCRYPTION_KEY: <your-32-byte-base64-encoded-encryption-key>
 ```
 
 !!! warning

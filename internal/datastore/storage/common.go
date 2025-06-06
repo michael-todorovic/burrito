@@ -69,9 +69,13 @@ type StorageBackend interface {
 }
 
 func New(config config.Config) Storage {
+	em, err := NewEncryptionManager(config.Datastore.Storage.Encryption)
+	if err != nil {
+		log.Fatalf("Failed to create encryption manager: %v", err)
+	}
 	storage := Storage{
 		Config:            config,
-		EncryptionManager: NewEncryptionManager(config.Datastore.Storage.Encryption),
+		EncryptionManager: em,
 	}
 
 	switch {

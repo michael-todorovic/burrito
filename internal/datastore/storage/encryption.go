@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/padok-team/burrito/internal/burrito/config"
@@ -13,26 +14,27 @@ type EncryptionManager struct {
 	config              config.EncryptionConfig
 }
 
-func NewEncryptionManager(config config.EncryptionConfig) *EncryptionManager {
+func NewEncryptionManager(config config.EncryptionConfig) (*EncryptionManager, error) {
 	em := &EncryptionManager{
 		namespaceEncryptors: make(map[string]*encryption.Encryptor),
 		config:              config,
 	}
 
-	// Read encryption key from environment variable instead of config
 	encryptionKey := os.Getenv("BURRITO_DATASTORE_STORAGE_ENCRYPTION_KEY")
 
-	if config.Enabled && encryptionKey != "" {
-		em.defaultEncryptor = encryption.NewEncryptor(encryptionKey)
+	if config.Enabled && encryptionKey == "" {
+		return nil, fmt.Errorf("encryption is enabled but no encryption key is provided in the environment variable BURRITO_DATASTORE_STORAGE_ENCRYPTION_KEY")
+	} else if config.Enabled && encryptionKey != "" {
+		encryptor, err := encryption.NewEncryptor(encryptionKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create encryptor: %w", err)
+		}
+		em.defaultEncryptor = encryptor
 	} else {
 		em.defaultEncryptor = nil
-		// // Create namespace-specific encryptors
-		// for namespace, key := range config.NamespaceKeys {
-		// 	em.namespaceEncryptors[namespace] = encryption.NewEncryptor(key)
-		// }
 	}
 
-	return em
+	return em, nil
 }
 
 func (em *EncryptionManager) GetEncryptor(namespace string) *encryption.Encryptor {

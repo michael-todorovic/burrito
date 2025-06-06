@@ -15,6 +15,7 @@ func TestNewEncryptionManager_WithEnvironmentVariable(t *testing.T) {
 		configEnabled   bool
 		configKey       string
 		expectEncryptor bool
+		expectError     bool
 	}{
 		{
 			name:            "encryption enabled with env key set",
@@ -22,6 +23,7 @@ func TestNewEncryptionManager_WithEnvironmentVariable(t *testing.T) {
 			configEnabled:   true,
 			configKey:       "config-key-should-be-ignored",
 			expectEncryptor: true,
+			expectError:     false,
 		},
 		{
 			name:            "encryption enabled but no env key",
@@ -29,6 +31,7 @@ func TestNewEncryptionManager_WithEnvironmentVariable(t *testing.T) {
 			configEnabled:   true,
 			configKey:       "config-key",
 			expectEncryptor: false,
+			expectError:     true, // This should return an error
 		},
 		{
 			name:            "encryption disabled with env key set",
@@ -36,6 +39,7 @@ func TestNewEncryptionManager_WithEnvironmentVariable(t *testing.T) {
 			configEnabled:   false,
 			configKey:       "",
 			expectEncryptor: false,
+			expectError:     false,
 		},
 		{
 			name:            "encryption disabled and no env key",
@@ -43,6 +47,7 @@ func TestNewEncryptionManager_WithEnvironmentVariable(t *testing.T) {
 			configEnabled:   false,
 			configKey:       "",
 			expectEncryptor: false,
+			expectError:     false,
 		},
 	}
 
@@ -64,7 +69,16 @@ func TestNewEncryptionManager_WithEnvironmentVariable(t *testing.T) {
 			}
 
 			// Create encryption manager
-			em := NewEncryptionManager(config)
+			em, err := NewEncryptionManager(config)
+
+			if tt.expectError {
+				assert.Error(t, err)
+				assert.Nil(t, em)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.NotNil(t, em)
 
 			// Check if encryptor is set as expected
 			if tt.expectEncryptor {
@@ -90,7 +104,8 @@ func TestEncryptionManager_EncryptDecrypt(t *testing.T) {
 	}
 
 	// Create encryption manager
-	em := NewEncryptionManager(config)
+	em, err := NewEncryptionManager(config)
+	assert.NoError(t, err)
 
 	// Test data
 	namespace := "test-namespace"
@@ -121,7 +136,8 @@ func TestEncryptionManager_DisabledEncryption(t *testing.T) {
 	}
 
 	// Create encryption manager
-	em := NewEncryptionManager(config)
+	em, err := NewEncryptionManager(config)
+	assert.NoError(t, err)
 
 	// Test data
 	namespace := "test-namespace"
