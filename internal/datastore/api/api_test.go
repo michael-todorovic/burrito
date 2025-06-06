@@ -14,6 +14,7 @@ import (
 	"github.com/padok-team/burrito/internal/burrito/config"
 	"github.com/padok-team/burrito/internal/datastore/api"
 	"github.com/padok-team/burrito/internal/datastore/storage"
+	"github.com/padok-team/burrito/internal/datastore/storage/mock"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
@@ -30,19 +31,21 @@ func TestDatastoreAPI(t *testing.T) {
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
-	// Create storage with proper configuration
-	testConfig := config.Config{
-		Datastore: config.DatastoreConfig{
-			Storage: config.StorageConfig{
-				Mock: true,
-				Encryption: config.EncryptionConfig{
-					Enabled: false, // No encryption for basic tests
+	// run tests without encryption by default
+	s := storage.Storage{
+		Backend: mock.New(),
+		Config: config.Config{
+			Datastore: config.DatastoreConfig{
+				Storage: config.StorageConfig{
+					Mock: true,
+					Encryption: config.EncryptionConfig{
+						Enabled: false,
+					},
 				},
 			},
 		},
+		EncryptionManager: &storage.EncryptionManager{},
 	}
-
-	s := storage.New(testConfig)
 	API = &api.API{}
 	API.Storage = s
 	API.Storage.PutLogs("default", "test1", "test1", "0", []byte("test1"))

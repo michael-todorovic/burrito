@@ -64,8 +64,7 @@ func TestNewEncryptionManager_WithEnvironmentVariable(t *testing.T) {
 
 			// Create config
 			config := config.EncryptionConfig{
-				Enabled:       tt.configEnabled,
-				EncryptionKey: tt.configKey,
+				Enabled: tt.configEnabled,
 			}
 
 			// Create encryption manager
@@ -99,8 +98,7 @@ func TestEncryptionManager_EncryptDecrypt(t *testing.T) {
 
 	// Create config with encryption enabled
 	config := config.EncryptionConfig{
-		Enabled:       true,
-		EncryptionKey: "should-be-ignored",
+		Enabled: true,
 	}
 
 	// Create encryption manager
@@ -131,8 +129,7 @@ func TestEncryptionManager_DisabledEncryption(t *testing.T) {
 
 	// Create config with encryption disabled
 	config := config.EncryptionConfig{
-		Enabled:       false,
-		EncryptionKey: "should-be-ignored",
+		Enabled: false,
 	}
 
 	// Create encryption manager

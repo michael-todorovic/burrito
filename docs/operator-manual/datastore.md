@@ -9,9 +9,9 @@ config:
   burrito:
     datastore:
       storage:
-        mock: <false|true> # default: false
         encryption:
           enabled: <false|true> # default: false
+        mock: <false|true> # default: false
         s3:
           bucket: <bucket-name>
           usePathStyle: <false|true> # default: false
@@ -35,7 +35,7 @@ Burrito supports encryption of data at rest in the datastore. When encryption is
 To enable encryption, you need to:
 
 1. Set `encryption.enabled: true` in the configuration
-2. Provide an encryption key via the `BURRITO_DATASTORE_STORAGE_ENCRYPTION_KEY` environment variable
+2. Provide an encryption key via the `BURRITO_DATASTORE_STORAGE_ENCRYPTION_KEY` environment variable, through a Kubernetes secret like below
 
 ```yaml
 config:
@@ -62,14 +62,11 @@ metadata:
   namespace: <datastoreNamespace>
 type: Opaque
 stringData:
-  BURRITO_DATASTORE_STORAGE_ENCRYPTION_KEY: <your-32-byte-base64-encoded-encryption-key>
+  BURRITO_DATASTORE_STORAGE_ENCRYPTION_KEY: <your-base64-encoded-encryption-key>
 ```
 
 !!! warning
-    The encryption key must be exactly 32 bytes when base64 decoded. Losing this key will make all encrypted data unrecoverable. Make sure to back up your encryption key securely.
-
-!!! info
-    Encryption is applied at the application level before data is sent to the storage backend. This means encrypted data is stored regardless of whether the underlying storage provider offers encryption at rest.
+    Losing the encryption key will make all encrypted data unrecoverable. Make sure to back up your encryption key securely.
 
 ## Authentication
 

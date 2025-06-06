@@ -52,8 +52,7 @@ type AzureConfig struct {
 }
 
 type EncryptionConfig struct {
-	Enabled       bool   `mapstructure:"enabled"`
-	EncryptionKey string `mapstructure:"key"`
+	Enabled bool `mapstructure:"enabled"`
 }
 
 type WebhookConfig struct {
