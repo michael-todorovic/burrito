@@ -30,7 +30,9 @@ config:
 
 ## Encryption
 
-Burrito supports encryption of data at rest in the datastore. When encryption is enabled, all data stored in the backend storage will be encrypted using AES-256-GCM.
+### Configuration
+
+Burrito supports encryption of data at rest in the datastore. When encryption is enabled, all data stored in the backend storage will be encrypted using AES-256-CBC. This allows you to decrypt with external tools such as `openssl`
 
 To enable encryption, you need to:
 
@@ -67,6 +69,39 @@ stringData:
 
 !!! warning
     Losing the encryption key will make all encrypted data unrecoverable. Make sure to back up your encryption key securely.
+
+### Security Notes
+
+- Always keep your encryption keys secure
+- The IV is stored in plaintext at the beginning of each encrypted file (this is standard practice)
+- Each encryption operation uses a random IV, ensuring the same plaintext produces different ciphertext
+
+### Files format
+
+The encrypted files use the following format:
+- First 16 bytes: Initialization Vector (IV)
+- Remaining bytes: AES-256-CBC encrypted data with PKCS#7 padding
+
+The encryption key is derived by taking the SHA-256 hash of the provided key string.
+
+### Decrypting with OpenSSL
+
+You have downloaded the encrypted file, you can now start to decrypt it:
+
+```bash
+# Extract the first 16 bytes (IV) as hex
+IV_HEX=$(xxd -l 16 -p plan.json)
+
+# derivate your key with sha256
+KEY_HASH=$(echo -n "your-encryption-key" | sha256sum | cut -d' ' -f1)
+
+# decrypt the file
+openssl enc -aes-256-cbc -d -in plan.json -K "${KEY_HASH}" -iv "${IV_HEX}"
+```
+
+### Encrypting existing files
+
+If you enable encryption on an existing datastore with unencrypted files, you can use the `/encrypt` endpoint to encrypt all existing files. See the [Encrypt Endpoint documentation](encrypt-endpoint.md) for detailed usage instructions.
 
 ## Authentication
 

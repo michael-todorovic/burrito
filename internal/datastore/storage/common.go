@@ -66,6 +66,7 @@ type StorageBackend interface {
 	Set(key string, value []byte, ttl int) error
 	Delete(key string) error
 	List(prefix string) ([]string, error)
+	ListRecursive(prefix string) ([]string, error)
 }
 
 func New(config config.Config) Storage {
@@ -225,4 +226,14 @@ func (s *Storage) PutGitBundle(namespace string, repository string, ref string, 
 		return fmt.Errorf("failed to store git bundle: %w", err)
 	}
 	return nil
+}
+
+// List lists immediate children under a prefix (non-recursive)
+func (s *Storage) List(prefix string) ([]string, error) {
+	return s.Backend.List(prefix)
+}
+
+// ListRecursive recursively lists all files under a prefix
+func (s *Storage) ListRecursive(prefix string) ([]string, error) {
+	return s.Backend.ListRecursive(prefix)
 }
