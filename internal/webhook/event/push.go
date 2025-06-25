@@ -20,27 +20,41 @@ type PushEvent struct {
 	Changes []string
 }
 
-func (e *PushEvent) Handle(c client.Client) error {
+func (e *PushEvent) Handle(c client.Client, namespaces []string) error {
 	date := time.Now().Format(time.UnixDate)
-	repositories := &configv1alpha1.TerraformRepositoryList{}
-	err := c.List(context.Background(), repositories)
-	if err != nil {
-		log.Errorf("could not list TerraformRepositories: %s", err)
-		return err
+
+	var allRepositories []configv1alpha1.TerraformRepository
+	var allLayers []configv1alpha1.TerraformLayer
+	var allPrs []configv1alpha1.TerraformPullRequest
+
+	// Iterate over all configured namespaces instead of cluster-wide listing
+	for _, namespace := range namespaces {
+		repositories := &configv1alpha1.TerraformRepositoryList{}
+		err := c.List(context.Background(), repositories, client.InNamespace(namespace))
+		if err != nil {
+			log.Errorf("could not list TerraformRepositories in namespace %s: %s", namespace, err)
+			continue
+		}
+		allRepositories = append(allRepositories, repositories.Items...)
+
+		layers := &configv1alpha1.TerraformLayerList{}
+		err = c.List(context.Background(), layers, client.InNamespace(namespace))
+		if err != nil {
+			log.Errorf("could not list TerraformLayers in namespace %s: %s", namespace, err)
+			continue
+		}
+		allLayers = append(allLayers, layers.Items...)
+
+		prs := &configv1alpha1.TerraformPullRequestList{}
+		err = c.List(context.Background(), prs, client.InNamespace(namespace))
+		if err != nil {
+			log.Errorf("could not list TerraformPullRequests in namespace %s: %s", namespace, err)
+			continue
+		}
+		allPrs = append(allPrs, prs.Items...)
 	}
-	layers := &configv1alpha1.TerraformLayerList{}
-	err = c.List(context.Background(), layers)
-	if err != nil {
-		log.Errorf("could not list TerraformLayers: %s", err)
-		return err
-	}
-	prs := &configv1alpha1.TerraformPullRequestList{}
-	err = c.List(context.Background(), prs)
-	if err != nil {
-		log.Errorf("could not list TerraformPullRequests: %s", err)
-		return err
-	}
-	affectedRepositories := e.getAffectedRepositories(repositories.Items)
+
+	affectedRepositories := e.getAffectedRepositories(allRepositories)
 	for _, repo := range affectedRepositories {
 		ann := map[string]string{}
 		ann[annotations.ComputeKeyForSyncBranchNow(e.Reference)] = time.Now().Format(time.UnixDate)
@@ -51,7 +65,7 @@ func (e *PushEvent) Handle(c client.Client) error {
 		}
 	}
 
-	for _, layer := range e.getAffectedLayers(layers.Items, affectedRepositories) {
+	for _, layer := range e.getAffectedLayers(allLayers, affectedRepositories) {
 		ann := map[string]string{}
 		log.Printf("evaluating TerraformLayer %s for revision %s", layer.Name, e.Reference)
 		if layer.Spec.Branch != e.Reference {
@@ -74,7 +88,7 @@ func (e *PushEvent) Handle(c client.Client) error {
 		}
 	}
 
-	for _, pr := range e.getAffectedPullRequests(prs.Items, affectedRepositories) {
+	for _, pr := range e.getAffectedPullRequests(allPrs, affectedRepositories) {
 		ann := map[string]string{}
 		ann[annotations.LastBranchCommit] = e.ChangeInfo.ShaAfter
 		ann[annotations.LastBranchCommitDate] = date

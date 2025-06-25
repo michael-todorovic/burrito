@@ -16,7 +16,7 @@ type ChangeInfo struct {
 }
 
 type Event interface {
-	Handle(client.Client) error
+	Handle(client.Client, []string) error
 }
 
 func ParseReference(ref string) string {

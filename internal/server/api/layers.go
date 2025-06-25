@@ -11,6 +11,7 @@ import (
 	"github.com/padok-team/burrito/internal/annotations"
 	"github.com/padok-team/burrito/internal/server/utils"
 	log "github.com/sirupsen/logrus"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type layer struct {
@@ -43,23 +44,33 @@ type layersResponse struct {
 }
 
 func (a *API) getLayersAndRuns() ([]configv1alpha1.TerraformLayer, map[string]configv1alpha1.TerraformRun, error) {
-	layers := &configv1alpha1.TerraformLayerList{}
-	err := a.Client.List(context.Background(), layers)
-	if err != nil {
-		log.Errorf("could not list TerraformLayers: %s", err)
-		return nil, nil, err
+	var allLayers []configv1alpha1.TerraformLayer
+	var allRuns []configv1alpha1.TerraformRun
+
+	// Iterate over all configured namespaces instead of cluster-wide listing
+	for _, namespace := range a.config.Controller.Namespaces {
+		layers := &configv1alpha1.TerraformLayerList{}
+		err := a.Client.List(context.Background(), layers, client.InNamespace(namespace))
+		if err != nil {
+			log.Errorf("could not list TerraformLayers in namespace %s: %s", namespace, err)
+			continue
+		}
+		allLayers = append(allLayers, layers.Items...)
+
+		runs := &configv1alpha1.TerraformRunList{}
+		err = a.Client.List(context.Background(), runs, client.InNamespace(namespace))
+		if err != nil {
+			log.Errorf("could not list TerraformRuns in namespace %s: %s", namespace, err)
+			continue
+		}
+		allRuns = append(allRuns, runs.Items...)
 	}
-	runs := &configv1alpha1.TerraformRunList{}
+
 	indexedRuns := map[string]configv1alpha1.TerraformRun{}
-	err = a.Client.List(context.Background(), runs)
-	if err != nil {
-		log.Errorf("could not list TerraformRuns: %s", err)
-		return nil, nil, err
-	}
-	for _, run := range runs.Items {
+	for _, run := range allRuns {
 		indexedRuns[fmt.Sprintf("%s/%s", run.Namespace, run.Name)] = run
 	}
-	return layers.Items, indexedRuns, err
+	return allLayers, indexedRuns, nil
 }
 
 func (a *API) LayersHandler(c echo.Context) error {

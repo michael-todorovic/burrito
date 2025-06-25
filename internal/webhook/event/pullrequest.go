@@ -24,14 +24,21 @@ type PullRequestEvent struct {
 	Commit    string
 }
 
-func (e *PullRequestEvent) Handle(c client.Client) error {
-	repositories := &configv1alpha1.TerraformRepositoryList{}
-	err := c.List(context.Background(), repositories)
-	if err != nil {
-		log.Errorf("could not list TerraformRepositories: %s", err)
-		return err
+func (e *PullRequestEvent) Handle(c client.Client, namespaces []string) error {
+	var allRepositories []configv1alpha1.TerraformRepository
+
+	// Iterate over all configured namespaces instead of cluster-wide listing
+	for _, namespace := range namespaces {
+		repositories := &configv1alpha1.TerraformRepositoryList{}
+		err := c.List(context.Background(), repositories, client.InNamespace(namespace))
+		if err != nil {
+			log.Errorf("could not list TerraformRepositories in namespace %s: %s", namespace, err)
+			continue
+		}
+		allRepositories = append(allRepositories, repositories.Items...)
 	}
-	affectedRepositories := e.getAffectedRepositories(repositories.Items)
+
+	affectedRepositories := e.getAffectedRepositories(allRepositories)
 	if len(affectedRepositories) == 0 {
 		log.Infof("no affected repositories found for pull request event")
 		return nil

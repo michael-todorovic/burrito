@@ -36,24 +36,30 @@ func New(c *config.Config) *Webhook {
 }
 
 func (w *Webhook) Init() error {
-	repositories := &configv1alpha1.TerraformRepositoryList{}
-	err := w.Client.List(context.Background(), repositories)
-	if err != nil {
-		return fmt.Errorf("failed to list TerraformRepository objects: %w", err)
-	}
-	err = w.initializeDefaultProvider()
+	err := w.initializeDefaultProvider()
 	if err != nil {
 		return fmt.Errorf("Some legacy webhook configuration was found but default providers could not be initialized: %w", err)
 	}
-	for _, r := range repositories.Items {
-		if _, ok := w.Providers[fmt.Sprintf("%s/%s", r.Namespace, r.Name)]; !ok {
-			provider, err := w.initializeProviders(r)
-			if err != nil {
-				log.Errorf("could not initialize provider for repository %s/%s: %s", r.Namespace, r.Name, err)
-			}
-			if provider != nil {
-				w.Providers[fmt.Sprintf("%s/%s", r.Namespace, r.Name)] = provider
-				log.Infof("initialized webhook handlers for repository %s/%s", r.Namespace, r.Name)
+
+	// Iterate over all configured namespaces instead of cluster-wide listing
+	for _, namespace := range w.Config.Controller.Namespaces {
+		repositories := &configv1alpha1.TerraformRepositoryList{}
+		err := w.Client.List(context.Background(), repositories, client.InNamespace(namespace))
+		if err != nil {
+			log.Errorf("failed to list TerraformRepository objects in namespace %s: %v", namespace, err)
+			continue
+		}
+
+		for _, r := range repositories.Items {
+			if _, ok := w.Providers[fmt.Sprintf("%s/%s", r.Namespace, r.Name)]; !ok {
+				provider, err := w.initializeProviders(r)
+				if err != nil {
+					log.Errorf("could not initialize provider for repository %s/%s: %s", r.Namespace, r.Name, err)
+				}
+				if provider != nil {
+					w.Providers[fmt.Sprintf("%s/%s", r.Namespace, r.Name)] = provider
+					log.Infof("initialized webhook handlers for repository %s/%s", r.Namespace, r.Name)
+				}
 			}
 		}
 	}
@@ -88,7 +94,7 @@ func (w *Webhook) GetHttpHandler() func(c echo.Context) error {
 			return c.String(http.StatusBadRequest, "Unknown webhook event")
 		}
 
-		err = event.Handle(w.Client)
+		err = event.Handle(w.Client, w.Config.Controller.Namespaces)
 		if err != nil {
 			log.Errorf("webhook processing worked but errored during event handling: %s", err)
 		}

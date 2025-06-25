@@ -15,6 +15,102 @@ spec:
   - kubernetes
 ---
 {{- end }}
+# Role for burrito-controllers in this tenant namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: burrito-controllers
+  labels:
+    {{- toYaml $metadataControllers.labels | nindent 4 }}
+  annotations:
+    {{- toYaml $metadataControllers.annotations | nindent 4 }}
+  namespace: {{ $tenant.namespace.name }}
+rules:
+- apiGroups: ["config.terraform.padok.cloud"]
+  resources: ["terraformrepositories"]
+  verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+- apiGroups: ["config.terraform.padok.cloud"]
+  resources: ["terraformrepositories/finalizers"]
+  verbs: ["update"]
+- apiGroups: ["config.terraform.padok.cloud"]
+  resources: ["terraformrepositories/status"]
+  verbs: ["get", "patch", "update"]
+- apiGroups: ["config.terraform.padok.cloud"]
+  resources: ["terraformlayers"]
+  verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+- apiGroups: ["config.terraform.padok.cloud"]
+  resources: ["terraformlayers/finalizers"]
+  verbs: ["update"]
+- apiGroups: ["config.terraform.padok.cloud"]
+  resources: ["terraformlayers/status"]
+  verbs: ["get", "patch", "update"]
+- apiGroups: ["config.terraform.padok.cloud"]
+  resources: ["terraformpullrequests"]
+  verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+- apiGroups: ["config.terraform.padok.cloud"]
+  resources: ["terraformpullrequests/finalizers"]
+  verbs: ["update"]
+- apiGroups: ["config.terraform.padok.cloud"]
+  resources: ["terraformpullrequests/status"]
+  verbs: ["get", "patch", "update"]
+- apiGroups: ["config.terraform.padok.cloud"]
+  resources: ["terraformruns"]
+  verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+- apiGroups: ["config.terraform.padok.cloud"]
+  resources: ["terraformruns/finalizers"]
+  verbs: ["update"]
+- apiGroups: ["config.terraform.padok.cloud"]
+  resources: ["terraformruns/status"]
+  verbs: ["get", "patch", "update"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["create", "delete", "get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods/log"]
+  verbs: ["get"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch"]
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["create", "delete", "get", "list", "watch"]
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+# Role for burrito-server in this tenant namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: burrito-server
+  labels:
+    {{- toYaml $metadataControllers.labels | nindent 4 }}
+  annotations:
+    {{- toYaml $metadataControllers.annotations | nindent 4 }}
+  namespace: {{ $tenant.namespace.name }}
+rules:
+- apiGroups: ["config.terraform.padok.cloud"]
+  resources: ["terraformrepositories"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["config.terraform.padok.cloud"]
+  resources: ["terraformlayers"]
+  verbs: ["get", "list", "watch", "patch", "update"]
+- apiGroups: ["config.terraform.padok.cloud"]
+  resources: ["terraformpullrequests"]
+  verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+- apiGroups: ["config.terraform.padok.cloud"]
+  resources: ["terraformruns"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list", "watch"]
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
@@ -26,11 +122,30 @@ metadata:
   namespace: {{ $tenant.namespace.name }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
+  kind: Role
   name: burrito-controllers
 subjects:
   - kind: ServiceAccount
     name: burrito-controllers
+    namespace: {{ $.Release.Namespace }}
+---
+# RoleBinding for burrito-server in this tenant namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: burrito-server
+  labels:
+    {{- toYaml $metadataControllers.labels | nindent 4 }}
+  annotations:
+    {{- toYaml $metadataControllers.annotations | nindent 4 }}
+  namespace: {{ $tenant.namespace.name }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: burrito-server
+subjects:
+  - kind: ServiceAccount
+    name: burrito-server
     namespace: {{ $.Release.Namespace }}
 ---
 # Default service account for running Burrito pods, this makes it optional to create at least one service account for each tenant
@@ -54,39 +169,6 @@ subjects:
 - kind: ServiceAccount
   name: burrito-runner
   namespace: {{ $tenant.namespace.name }}
----
-# Role and RoleBinding for burrito-server to access this tenant's secrets (webhook secret)
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: secret-access
-  labels:
-    {{- toYaml $metadataControllers.labels | nindent 4 }}
-  annotations:
-    {{- toYaml $metadataControllers.annotations | nindent 4 }}
-  namespace: {{ $tenant.namespace.name }}
-rules:
-- apiGroups: [""]
-  resources: ["secrets"]
-  verbs: ["get", "list", "watch"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: burrito-server-secret-access
-  labels:
-    {{- toYaml $metadataControllers.labels | nindent 4 }}
-  annotations:
-    {{- toYaml $metadataControllers.annotations | nindent 4 }}
-  namespace: {{ $tenant.namespace.name }}
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: secret-access
-subjects:
-- kind: ServiceAccount
-  name: burrito-server
-  namespace: {{ $.Release.Namespace }}
 ---
 {{- range $serviceAccount := .serviceAccounts }}
 apiVersion: v1

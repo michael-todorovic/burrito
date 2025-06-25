@@ -8,6 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 	configv1alpha1 "github.com/padok-team/burrito/api/v1alpha1"
 	log "github.com/sirupsen/logrus"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type repository struct {
@@ -19,14 +20,21 @@ type repositoriesResponse struct {
 }
 
 func (a *API) RepositoriesHandler(c echo.Context) error {
-	repositories := &configv1alpha1.TerraformRepositoryList{}
-	err := a.Client.List(context.Background(), repositories)
-	if err != nil {
-		log.Errorf("could not list TerraformRepositories: %s", err)
-		return c.String(http.StatusInternalServerError, "could not list terraform repositories")
+	var allRepositories []configv1alpha1.TerraformRepository
+
+	// Iterate over all configured namespaces instead of cluster-wide listing
+	for _, namespace := range a.config.Controller.Namespaces {
+		repositories := &configv1alpha1.TerraformRepositoryList{}
+		err := a.Client.List(context.Background(), repositories, client.InNamespace(namespace))
+		if err != nil {
+			log.Errorf("could not list TerraformRepositories in namespace %s: %s", namespace, err)
+			continue
+		}
+		allRepositories = append(allRepositories, repositories.Items...)
 	}
+
 	results := []repository{}
-	for _, r := range repositories.Items {
+	for _, r := range allRepositories {
 		results = append(results, repository{
 			Name: fmt.Sprintf("%s/%s", r.Namespace, r.Name),
 		})
