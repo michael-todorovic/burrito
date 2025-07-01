@@ -148,6 +148,30 @@ subjects:
     name: burrito-server
     namespace: {{ $.Release.Namespace }}
 ---
+# Role for burrito-runner in this tenant namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: burrito-runner
+  labels:
+    app.kubernetes.io/component: runner
+    app.kubernetes.io/name: burrito-runner
+    app.kubernetes.io/part-of: burrito
+  namespace: {{ $tenant.namespace.name }}
+rules:
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["get", "delete"]
+- apiGroups: ["config.terraform.padok.cloud"]
+  resources: ["terraformlayers"]
+  verbs: ["get", "patch"]
+- apiGroups: ["config.terraform.padok.cloud"]
+  resources: ["terraformruns"]
+  verbs: ["get"]
+- apiGroups: ["config.terraform.padok.cloud"]
+  resources: ["terraformrepositories"]
+  verbs: ["get"]
+---
 # Default service account for running Burrito pods, this makes it optional to create at least one service account for each tenant
 apiVersion: v1
 kind: ServiceAccount
@@ -163,7 +187,7 @@ metadata:
   namespace: {{ $tenant.namespace.name }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
+  kind: Role
   name: burrito-runner
 subjects:
 - kind: ServiceAccount
@@ -190,7 +214,7 @@ metadata:
   namespace: {{ $tenant.namespace.name }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
+  kind: Role
   name: burrito-runner
 subjects:
 - kind: ServiceAccount

@@ -134,7 +134,7 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: burrito-datastore
+  name: burrito-datastore-{{ $.Release.Namespace }}
   labels:
     {{- toYaml .metadata.labels | nindent 4 }}
   annotations:

@@ -1,11 +1,12 @@
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: Role
 metadata:
   labels:
     app.kubernetes.io/component: runner
     app.kubernetes.io/name: burrito-runner
     app.kubernetes.io/part-of: burrito
   name: burrito-runner
+  namespace: {{ .Release.Namespace }}
 rules:
 - apiGroups:
   - coordination.k8s.io
