@@ -1,11 +1,19 @@
+{{- $namespaces := list }}
+{{- range $tenant := .Values.tenants }}
+{{- $namespaces = append $namespaces $tenant.namespace.name }}
+{{- end }}
+{{- $namespaces = append $namespaces .Release.Namespace }}
+{{- range $namespace := $namespaces }}
+---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: Role
 metadata:
   labels:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: burrito-server
     app.kubernetes.io/part-of: burrito
   name: burrito-server
+  namespace: {{ $namespace }}
 rules:
 - apiGroups:
   - config.terraform.padok.cloud
@@ -89,3 +97,4 @@ rules:
   - get
   - patch
   - update
+{{- end }}

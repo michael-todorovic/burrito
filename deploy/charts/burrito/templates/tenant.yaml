@@ -26,7 +26,7 @@ metadata:
   namespace: {{ $tenant.namespace.name }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
+  kind: Role
   name: burrito-controllers
 subjects:
   - kind: ServiceAccount
@@ -83,6 +83,25 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: secret-access
+subjects:
+- kind: ServiceAccount
+  name: burrito-server
+  namespace: {{ $.Release.Namespace }}
+---
+# RoleBinding for burrito-server to access terraform resources in this tenant namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: burrito-server-terraform-access
+  labels:
+    {{- toYaml $metadataControllers.labels | nindent 4 }}
+  annotations:
+    {{- toYaml $metadataControllers.annotations | nindent 4 }}
+  namespace: {{ $tenant.namespace.name }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: burrito-server
 subjects:
 - kind: ServiceAccount
   name: burrito-server
