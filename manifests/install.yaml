@@ -10302,6 +10302,11 @@ spec:
       - args:
         - server
         - start
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
         envFrom:
         - configMapRef:
             name: burrito-config
