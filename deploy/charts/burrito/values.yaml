@@ -1,7 +1,7 @@
 # TODO: Make CRD install optional? or use --skip-crds Helm flag
 # Custom Resource Definitions
-crds:
-  install: true
+# crds:
+#   install: true
 
 # Burrito configuration
 ## Ref: https://docs.burrito.tf/operator-manual/advanced-configuration/

@@ -196,13 +196,7 @@ func (c *Config) Load(flags *pflag.FlagSet) error {
 		return err
 	}
 
-	err = v.Unmarshal(c)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error unmarshaling config: %s\n", err)
-		return err
-	}
-	
-	return nil
+	return v.Unmarshal(c)
 }
 
 // bindEnvironmentVariables inspects iface's structure and recursively binds its
