@@ -129,12 +129,17 @@ define upgrade-kind-common
 	kind load docker-image burrito:$(NEW_VERSION)
 	yq e '.global.deployment.image.tag = "$(NEW_VERSION)"' -i deploy/charts/burrito/$(1)
 	yq e '.config.burrito.runner.image.tag = "$(NEW_VERSION)"' -i deploy/charts/burrito/$(1)
-	$(call upgrade-helm-common,$(1))
 endef
 
 .PHONY: upgrade-dev-kind
 upgrade-dev-kind:
-	$(call upgrade-kind-common,values-dev.yaml,--build-arg BUILD_MODE=Release)
+	$(call upgrade-kind-common,values-dev.yaml,--build-arg BUILD_MODE=Release,--set crds.install=false)
+	helm upgrade --install -f deploy/charts/burrito/values.yaml -f deploy/charts/burrito/values-dev.yaml --kube-context burrito-system@kind -n burrito-system --create-namespace burrito-system deploy/charts/burrito
+
+.PHONY: upgrade-dev-kind2
+upgrade-dev-kind2:
+	$(call upgrade-kind-common,values-dev2.yaml,--build-arg BUILD_MODE=Release,--set crds.install=false)
+	helm upgrade --install -f deploy/charts/burrito/values.yaml -f deploy/charts/burrito/values-dev2.yaml --kube-context burrito-system2@kind -n burrito-system2 --create-namespace burrito-system2 deploy/charts/burrito
 
 .PHONY: upgrade-debug-kind
 upgrade-debug-kind:

@@ -9843,7 +9843,7 @@ metadata:
   name: burrito-server
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: Role
 metadata:
   labels:
     app.kubernetes.io/component: controllers
@@ -9996,7 +9996,7 @@ rules:
   - delete
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: Role
 metadata:
   labels:
     app.kubernetes.io/component: runner
@@ -10026,7 +10026,7 @@ rules:
   - get
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: Role
 metadata:
   labels:
     app.kubernetes.io/component: server
@@ -10118,7 +10118,7 @@ rules:
   - update
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: RoleBinding
 metadata:
   labels:
     app.kubernetes.io/component: controllers
@@ -10127,7 +10127,7 @@ metadata:
   name: burrito-controllers
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
+  kind: Role
   name: burrito-controllers
 subjects:
 - kind: ServiceAccount
@@ -10135,7 +10135,7 @@ subjects:
   namespace: burrito
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: RoleBinding
 metadata:
   labels:
     app.kubernetes.io/component: runner
@@ -10144,7 +10144,7 @@ metadata:
   name: burrito-runner
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
+  kind: Role
   name: burrito-runner
 subjects:
 - kind: ServiceAccount
@@ -10152,7 +10152,7 @@ subjects:
   namespace: burrito
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: RoleBinding
 metadata:
   labels:
     app.kubernetes.io/component: server
@@ -10161,7 +10161,7 @@ metadata:
   name: burrito-server
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
+  kind: Role
   name: burrito-server
 subjects:
 - kind: ServiceAccount

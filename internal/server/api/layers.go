@@ -11,6 +11,7 @@ import (
 	"github.com/padok-team/burrito/internal/annotations"
 	"github.com/padok-team/burrito/internal/server/utils"
 	log "github.com/sirupsen/logrus"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type layer struct {
@@ -43,23 +44,39 @@ type layersResponse struct {
 }
 
 func (a *API) getLayersAndRuns() ([]configv1alpha1.TerraformLayer, map[string]configv1alpha1.TerraformRun, error) {
-	layers := &configv1alpha1.TerraformLayerList{}
-	err := a.Client.List(context.Background(), layers)
-	if err != nil {
-		log.Errorf("could not list TerraformLayers: %s", err)
-		return nil, nil, err
-	}
-	runs := &configv1alpha1.TerraformRunList{}
+	allLayers := []configv1alpha1.TerraformLayer{}
 	indexedRuns := map[string]configv1alpha1.TerraformRun{}
-	err = a.Client.List(context.Background(), runs)
-	if err != nil {
-		log.Errorf("could not list TerraformRuns: %s", err)
-		return nil, nil, err
+	
+	// Get current tenant namespaces dynamically
+	namespaces := a.getNamespaces()
+	
+	// Collect layers and runs from all configured tenant namespaces
+	for _, namespace := range namespaces {
+		layers := &configv1alpha1.TerraformLayerList{}
+		err := a.Client.List(context.Background(), layers, &client.ListOptions{
+			Namespace: namespace,
+		})
+		if err != nil {
+			log.Errorf("could not list TerraformLayers in namespace %s: %s", namespace, err)
+			continue // Continue with other namespaces even if one fails
+		}
+		allLayers = append(allLayers, layers.Items...)
+		
+		runs := &configv1alpha1.TerraformRunList{}
+		err = a.Client.List(context.Background(), runs, &client.ListOptions{
+			Namespace: namespace,
+		})
+		if err != nil {
+			log.Errorf("could not list TerraformRuns in namespace %s: %s", namespace, err)
+			continue // Continue with other namespaces even if one fails
+		}
+		
+		for _, run := range runs.Items {
+			indexedRuns[fmt.Sprintf("%s/%s", run.Namespace, run.Name)] = run
+		}
 	}
-	for _, run := range runs.Items {
-		indexedRuns[fmt.Sprintf("%s/%s", run.Namespace, run.Name)] = run
-	}
-	return layers.Items, indexedRuns, err
+	
+	return allLayers, indexedRuns, nil
 }
 
 func (a *API) LayersHandler(c echo.Context) error {

@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"html"
+	"io/ioutil"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	configv1alpha1 "github.com/padok-team/burrito/api/v1alpha1"
@@ -24,7 +27,7 @@ type Handler interface {
 
 type Webhook struct {
 	client.Client
-	Config    *config.Config
+	Config *config.Config
 	Providers map[string][]gitprovider.Provider
 }
 
@@ -35,28 +38,72 @@ func New(c *config.Config) *Webhook {
 	}
 }
 
+// getNamespaces returns the list of tenant namespaces to operate on
+func (w *Webhook) getNamespaces() []string {
+	// Use tenant namespaces from controller config if available, otherwise fall back to current namespace
+	namespaces := w.Config.Controller.Namespaces
+	if len(namespaces) == 0 {
+		namespaces = []string{getCurrentNamespace()}
+	}
+	return namespaces
+}// getCurrentNamespace tries to determine the current namespace from environment variables or service account
+func getCurrentNamespace() string {
+	// First, try to get namespace from environment variable (commonly set in k8s deployments)
+	if ns := os.Getenv("POD_NAMESPACE"); ns != "" {
+		return ns
+	}
+
+	// Second, try to read from service account namespace file
+	if data, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace"); err == nil {
+		if ns := strings.TrimSpace(string(data)); ns != "" {
+			return ns
+		}
+	}
+
+	// Third, try the NAMESPACE environment variable
+	if ns := os.Getenv("NAMESPACE"); ns != "" {
+		return ns
+	}
+
+	// Default fallback
+	return ""
+}
+
 func (w *Webhook) Init() error {
-	repositories := &configv1alpha1.TerraformRepositoryList{}
-	err := w.Client.List(context.Background(), repositories)
-	if err != nil {
-		return fmt.Errorf("failed to list TerraformRepository objects: %w", err)
-	}
-	err = w.initializeDefaultProvider()
-	if err != nil {
-		return fmt.Errorf("Some legacy webhook configuration was found but default providers could not be initialized: %w", err)
-	}
-	for _, r := range repositories.Items {
-		if _, ok := w.Providers[fmt.Sprintf("%s/%s", r.Namespace, r.Name)]; !ok {
-			provider, err := w.initializeProviders(r)
-			if err != nil {
-				log.Errorf("could not initialize provider for repository %s/%s: %s", r.Namespace, r.Name, err)
-			}
-			if provider != nil {
-				w.Providers[fmt.Sprintf("%s/%s", r.Namespace, r.Name)] = provider
-				log.Infof("initialized webhook handlers for repository %s/%s", r.Namespace, r.Name)
+	// Get current tenant namespaces dynamically
+	namespaces := w.getNamespaces()
+	log.Infof("Initializing webhook handlers for namespaces: %v", namespaces)
+
+	// Initialize providers from all configured tenant namespaces
+	for _, namespace := range namespaces {
+		repositories := &configv1alpha1.TerraformRepositoryList{}
+		err := w.Client.List(context.Background(), repositories, &client.ListOptions{
+			Namespace: namespace,
+		})
+		if err != nil {
+			log.Errorf("failed to list TerraformRepository objects in namespace %s: %v", namespace, err)
+			continue // Continue with other namespaces even if one fails
+		}
+		
+		for _, r := range repositories.Items {
+			if _, ok := w.Providers[fmt.Sprintf("%s/%s", r.Namespace, r.Name)]; !ok {
+				provider, err := w.initializeProviders(r)
+				if err != nil {
+					log.Errorf("could not initialize provider for repository %s/%s: %s", r.Namespace, r.Name, err)
+				}
+				if provider != nil {
+					w.Providers[fmt.Sprintf("%s/%s", r.Namespace, r.Name)] = provider
+					log.Infof("initialized webhook handlers for repository %s/%s", r.Namespace, r.Name)
+				}
 			}
 		}
 	}
+	
+	err := w.initializeDefaultProvider()
+	if err != nil {
+		return fmt.Errorf("Some legacy webhook configuration was found but default providers could not be initialized: %w", err)
+	}
+	
 	return nil
 }
 
