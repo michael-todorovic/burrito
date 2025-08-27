@@ -3,16 +3,17 @@ config:
     runner:
       image:
         repository: burrito
-        tag: "1756136102"
+        tag: "1756216035"
         pullPolicy: Never
     datastore:
+      hostname: "burrito-datastore.burrito-system2.svc.cluster.local"
       storage:
         mock: true
 global:
   deployment:
     image:
       repository: burrito
-      tag: "1756136102"
+      tag: "1756216035"
       pullPolicy: Never
 tenants:
   - namespace:
