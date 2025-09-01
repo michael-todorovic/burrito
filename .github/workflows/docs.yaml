@@ -19,7 +19,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0  # Fetch all branches to include 'gh-pages' branch
       - uses: actions/setup-python@v5
@@ -36,7 +36,7 @@ jobs:
         run: pip install mkdocs-material mike
 
       - name: Lint Markdown files
-        uses: DavidAnson/markdownlint-cli2-action@v19
+        uses: DavidAnson/markdownlint-cli2-action@v20
         with:
           config: 'docs/.markdownlint.jsonc'
           globs: 'docs/**/*.md'

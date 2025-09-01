@@ -30,6 +30,7 @@ nav:
 - Operator Manual:
   - operator-manual/index.md
   - operator-manual/architecture.md
+  - operator-manual/user-authentication.md
   - operator-manual/git-authentication.md
   - operator-manual/pr-mr-workflow.md
   - operator-manual/git-webhook.md
@@ -38,6 +39,7 @@ nav:
   - operator-manual/datastore.md
   - operator-manual/provider-caching.md
   - operator-manual/runner-scheduling.md
+  - operator-manual/encrypt-endpoint.md
 - User Guide:
   - user-guide/index.md
   - user-guide/override-runner.md
